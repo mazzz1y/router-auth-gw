@@ -11,4 +11,4 @@ FROM alpine:3.20
 COPY --from=build /keenetic-auth-gw /keenetic-auth-gw
 USER 1337
 
-CMD ["/keenetic-auth-gw", "-c", "config.yaml"]
+CMD ["/keenetic-auth-gw", "-c", "config.yaml", "start"]
