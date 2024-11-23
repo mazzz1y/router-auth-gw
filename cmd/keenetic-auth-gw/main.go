@@ -20,6 +20,7 @@ func main() {
 		Flags: []cli.Flag{
 			&cli.StringFlag{
 				Name:    "config",
+				Aliases: []string{"c"},
 				EnvVars: []string{"CONFIG_PATH"},
 				Value:   "config.yaml",
 				Usage:   "path to configuration file",
