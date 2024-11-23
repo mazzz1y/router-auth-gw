@@ -9,9 +9,20 @@ This app provides numerous options and supports multiple devices for complex con
 - **Multiple Server Instances**: Supports multiple entry points, each listening on different local ports with unique settings.
 - **Authentication Methods**: Includes basic authentication and forwarded authentication headers, enabling integration with OAuth2 Proxy, Authelia, Authentik, and other SSO solutions.
 - **Device Configuration**: Supports multiple device configurations.
-- **Proxy**: Configurable HTTP/SOCKS proxy for each device or globally via http_proxy variables 
+- **Proxy**: Configurable HTTP/SOCKS proxy for each device or globally via http_proxy variables
 
-## Configuration
+## Usage
+### Docker
+```yaml
+services:
+  keenetic-auth-gw:
+    image: "ghcr.io/mazzz1y/keenetic-auth-gw:latest"
+    ports:
+      - 8080:8080
+    volumes:
+      - "./config.yaml:config.yaml"
+```
+### Configuration
 
 ```yaml
 entrypoints:
