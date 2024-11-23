@@ -1,7 +1,6 @@
 package devices
 
 import (
-	"fmt"
 	"github.com/mazzz1y/keenetic-auth-gw/internal/config"
 	"github.com/mazzz1y/keenetic-auth-gw/pkg/keenetic"
 )
@@ -37,17 +36,6 @@ func NewDeviceManager(cfg []config.DeviceConfig, auth bool) (*DeviceManager, err
 		}
 	}
 	return deviceManager, nil
-}
-
-func (dm *DeviceManager) Auth() error {
-	for tag, device := range dm.Devices {
-		for _, user := range device.Users {
-			if err := user.Client.Auth(); err != nil {
-				return fmt.Errorf("%s/%s: %v", tag, user.Name, err)
-			}
-		}
-	}
-	return nil
 }
 
 func (dm *DeviceManager) GetDeviceByTag(tag string) (Device, bool) {

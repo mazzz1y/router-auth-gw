@@ -91,19 +91,6 @@ func (kc *Client) RequestWithAuth(method, endpoint, body string) (*http.Response
 	return res, nil
 }
 
-func (kc *Client) checkLoginStatus() error {
-	resp, err := kc.request("GET", kc.URL+"/auth", "")
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode == http.StatusOK {
-		return nil
-	}
-	return fmt.Errorf("status: %d", resp.StatusCode)
-}
-
 func (kc *Client) getChallenge() (string, string, error) {
 	resp, err := kc.request("GET", kc.URL+"/auth", "")
 	if err != nil {
