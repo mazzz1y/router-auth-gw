@@ -36,14 +36,14 @@ func TestGetDeviceByTag(t *testing.T) {
 	manager, _ := device.NewDeviceManager(mockConfig.Devices, false)
 
 	t.Run("DeviceFound", func(t *testing.T) {
-		device, found := manager.GetDeviceByTag("Device1")
+		d, found := manager.GetDeviceByTag("Device1")
 		assert.True(t, found)
-		assert.Equal(t, "Device1", device.Tag)
+		assert.Equal(t, "Device1", d.Tag)
 	})
 
 	t.Run("DeviceNotFound", func(t *testing.T) {
-		device, found := manager.GetDeviceByTag("InvalidTag")
+		d, found := manager.GetDeviceByTag("InvalidTag")
 		assert.False(t, found)
-		assert.Equal(t, device.Device{}, device)
+		assert.Equal(t, device.Device{}, d)
 	})
 }

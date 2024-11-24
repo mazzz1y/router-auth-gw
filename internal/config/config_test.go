@@ -16,7 +16,7 @@ entrypoints:
       - username: xxx
         password: xxx
     allowed_endpoints: ["/status", "/health"]
-device:
+devices:
   - tag: "device123"
     url: "http://device.local"
     users:
