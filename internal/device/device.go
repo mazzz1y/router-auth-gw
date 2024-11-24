@@ -1,4 +1,4 @@
-package devices
+package device
 
 import (
 	"github.com/mazzz1y/keenetic-auth-gw/internal/config"

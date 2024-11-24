@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/http/cookiejar"
@@ -61,7 +62,7 @@ func (kc *Client) Auth() error {
 	defer res.Body.Close()
 
 	if res.StatusCode != http.StatusOK {
-		return fmt.Errorf("%d", res.StatusCode)
+		return errors.New("auth failed")
 	}
 
 	return nil
@@ -81,7 +82,8 @@ func (kc *Client) RequestWithAuth(method, endpoint, body string) (*http.Response
 
 	if res.StatusCode == http.StatusUnauthorized {
 		if err := kc.Auth(); err != nil {
-			return nil, fmt.Errorf("authentication failed: %v", err)
+			return nil, err
+
 		}
 		return kc.request(method, urlParsed.String(), body)
 	}
@@ -99,7 +101,7 @@ func (kc *Client) getChallenge() (string, string, error) {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusUnauthorized {
-		return "", "", fmt.Errorf("unexpected status code: %d", resp.StatusCode)
+		return "", "", fmt.Errorf("unexpected status code when getting challenge: %d", resp.StatusCode)
 	}
 
 	challenge := resp.Header.Get("X-NDM-Challenge")
@@ -121,12 +123,12 @@ func (kc *Client) request(method, url, body string) (*http.Response, error) {
 		req.Header.Set("Content-Type", "application/json")
 	}
 
-	res, err := kc.Client.Do(req)
+	resp, err := kc.Client.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("failed to make request: %v", err)
 	}
 
-	return res, nil
+	return resp, nil
 }
 
 func (kc *Client) generatePasswordHash(challenge, realm string) string {

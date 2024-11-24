@@ -2,10 +2,11 @@ package main
 
 import (
 	"github.com/mazzz1y/keenetic-auth-gw/internal/config"
-	"github.com/mazzz1y/keenetic-auth-gw/internal/devices"
+	"github.com/mazzz1y/keenetic-auth-gw/internal/device"
 	"github.com/mazzz1y/keenetic-auth-gw/internal/entrypoint"
+	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
 	"github.com/urfave/cli/v2"
-	"log"
 	"os"
 	"sync"
 )
@@ -25,6 +26,18 @@ func main() {
 				Value:   "config.yaml",
 				Usage:   "path to configuration file",
 			},
+			&cli.StringFlag{
+				Name:    "log-level",
+				EnvVars: []string{"LOG_LEVEL"},
+				Value:   "info",
+				Usage:   "Logging level (e.g. debug, info, warn, error, fatal, panic, no)",
+			},
+			&cli.StringFlag{
+				Name:    "log-type",
+				EnvVars: []string{"LOG_TYPE"},
+				Value:   "pretty",
+				Usage:   "Logging format/type (e.g. pretty, json)",
+			},
 		},
 		Commands: []*cli.Command{
 			{
@@ -36,18 +49,23 @@ func main() {
 	}
 
 	if err := app.Run(os.Args); err != nil {
-		log.Fatal(err)
+		log.Fatal().Err(err).Msg("failed to start")
 	}
 }
 
 func startServersAction(c *cli.Context) error {
 	configPath := c.String("config")
+	logLevel := c.String("log-level")
+	logType := c.String("log-type")
+
+	setLogLevel(logLevel, logType)
+
 	cfg, err := config.LoadConfig(configPath)
 	if err != nil {
 		return err
 	}
 
-	dm, err := devices.NewDeviceManager(cfg.Devices, true)
+	dm, err := device.NewDeviceManager(cfg.Devices, true)
 	if err != nil {
 		return err
 	}
@@ -62,12 +80,12 @@ func startServersAction(c *cli.Context) error {
 	return nil
 }
 
-func startServer(dm *devices.DeviceManager, entryCfg config.EntrypointConfig, wg *sync.WaitGroup) {
+func startServer(dm *device.DeviceManager, entryCfg config.EntrypointConfig, wg *sync.WaitGroup) {
 	defer wg.Done()
 
 	device, ok := dm.GetDeviceByTag(entryCfg.DeviceTag)
 	if !ok {
-		log.Fatalf("%s: \"%s\" device not found", entryCfg.Listen, entryCfg.DeviceTag)
+		log.Fatal().Msgf("%s: \"%s\" device not found", entryCfg.Listen, entryCfg.DeviceTag)
 	}
 
 	err := entrypoint.NewEntrypoint(entrypoint.EntrypointOptions{
@@ -80,6 +98,39 @@ func startServer(dm *devices.DeviceManager, entryCfg config.EntrypointConfig, wg
 	}).Start()
 
 	if err != nil {
-		log.Fatalf("error running entrypoint %v: %v", entryCfg, err)
+		log.Fatal().Err(err).Msg("failed to start entrypoint")
+	}
+}
+
+func setLogLevel(logLevel string, logType string) {
+	switch logType {
+	case "json":
+	case "pretty":
+		log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
+	default:
+		log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
+		log.Info().Msgf("invalid log type: %s. using 'pretty' as default", logType)
+	}
+
+	switch logLevel {
+	case "trace":
+		zerolog.SetGlobalLevel(zerolog.TraceLevel)
+	case "debug":
+		zerolog.SetGlobalLevel(zerolog.DebugLevel)
+	case "info":
+		zerolog.SetGlobalLevel(zerolog.InfoLevel)
+	case "warn":
+		zerolog.SetGlobalLevel(zerolog.WarnLevel)
+	case "error":
+		zerolog.SetGlobalLevel(zerolog.ErrorLevel)
+	case "fatal":
+		zerolog.SetGlobalLevel(zerolog.FatalLevel)
+	case "panic":
+		zerolog.SetGlobalLevel(zerolog.PanicLevel)
+	case "no":
+		zerolog.SetGlobalLevel(zerolog.NoLevel)
+	default:
+		zerolog.SetGlobalLevel(zerolog.InfoLevel)
+		log.Info().Msgf("invalid log level: %s. using 'info' as default", logLevel)
 	}
 }

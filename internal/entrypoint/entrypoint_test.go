@@ -7,7 +7,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/mazzz1y/keenetic-auth-gw/internal/devices"
+	"github.com/mazzz1y/keenetic-auth-gw/internal/device"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -26,11 +26,11 @@ func (m *MockClient) RequestWithAuth(_, _, _ string) (*http.Response, error) {
 	}, nil
 }
 
-func NewMockDevice() devices.Device {
+func NewMockDevice() device.Device {
 	mockClient := &MockClient{}
 
-	device := devices.Device{
-		Users: []devices.User{
+	device := device.Device{
+		Users: []device.User{
 			{Name: "user", Client: mockClient},
 		},
 	}
