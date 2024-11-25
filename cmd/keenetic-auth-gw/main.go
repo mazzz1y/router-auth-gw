@@ -83,13 +83,13 @@ func startServersAction(c *cli.Context) error {
 func startServer(dm *device.DeviceManager, entryCfg config.EntrypointConfig, wg *sync.WaitGroup) {
 	defer wg.Done()
 
-	device, ok := dm.GetDeviceByTag(entryCfg.DeviceTag)
+	d, ok := dm.GetDeviceByTag(entryCfg.DeviceTag)
 	if !ok {
 		log.Fatal().Msgf("%s: \"%s\" device not found", entryCfg.Listen, entryCfg.DeviceTag)
 	}
 
 	err := entrypoint.NewEntrypoint(entrypoint.EntrypointOptions{
-		Device:            device,
+		Device:            d,
 		ListenAddr:        entryCfg.Listen,
 		ForwardAuthHeader: entryCfg.ForwardedAuthHeader,
 		BasicAuth:         entryCfg.BasicAuthMap(),

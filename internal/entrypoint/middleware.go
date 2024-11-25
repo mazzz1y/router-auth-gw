@@ -18,7 +18,7 @@ func (e *Entrypoint) authenticateMiddleware(next http.HandlerFunc) http.HandlerF
 				Str("from", r.RemoteAddr).
 				Str("uri", r.URL.RequestURI()).
 				Msg("authentication failed")
-			http.Error(w, "Unauthorized", http.StatusUnauthorized)
+			http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
 			return
 		}
 		ctx := context.WithValue(r.Context(), clientContextKey, client)
@@ -33,7 +33,7 @@ func (e *Entrypoint) isAllowedMiddleware(next http.HandlerFunc) http.HandlerFunc
 				Str("from", r.RemoteAddr).
 				Str("uri", r.URL.RequestURI()).
 				Msg("request not allowed")
-			http.Error(w, err.Error(), http.StatusForbidden)
+			http.Error(w, http.StatusText(http.StatusForbidden), http.StatusForbidden)
 			return
 		}
 		next.ServeHTTP(w, r)
