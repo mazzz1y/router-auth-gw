@@ -65,11 +65,6 @@ func (e *Entrypoint) authenticate(r *http.Request) (keenetic.ClientWrapper, erro
 		if storedPass != pass {
 			return nil, fmt.Errorf("invalid password for user: %s", user)
 		}
-		client, ok := getClientByName(e.Options.Device, user)
-		if !ok {
-			return nil, fmt.Errorf("client not found for authenticated user: %s", user)
-		}
-		return client, nil
 	}
 
 	if len(e.Options.Device.Users) > 0 {
