@@ -43,7 +43,12 @@ entrypoints:
     # For use with OAuth2 Proxy, Authelia, and other authorization proxies.
     # Requests with a valid username in the header will be forwarded without additional authorization.
     # If the username is not valid, a 403 error will be returned.
-    forwarded_auth_header: X-Forwarded-User
+    forward_auth:
+      header: X-Forwarded-User
+      # Mapping of incoming usernames to internal usernames.
+      # For example, the user coming from the header 'mazzz1y' will be logged as the 'admin' internal user.
+      mapping:
+        mazzz1y: admin
 
 devices:
   - tag: keenetic-home

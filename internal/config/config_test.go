@@ -1,9 +1,10 @@
 package config_test
 
 import (
-	"github.com/mazzz1y/keenetic-auth-gw/internal/config"
 	"os"
 	"testing"
+
+	"github.com/mazzz1y/keenetic-auth-gw/internal/config"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -16,6 +17,10 @@ entrypoints:
       - username: xxx
         password: xxx
     allowed_endpoints: ["/status", "/health"]
+    forward_auth:
+      header: X-Forwared-User
+      mapping:
+        user1: user2
 devices:
   - tag: "device123"
     url: "http://device.local"
@@ -43,6 +48,12 @@ func TestLoadConfig_Success(t *testing.T) {
 				},
 			},
 			AllowedEndpoints: []string{"/status", "/health"},
+			ForwardAuth: config.ForwardAuthConfig{
+				Header: "X-Forwared-User",
+				Mapping: map[string]string{
+					"user1": "user2",
+				},
+			},
 		}},
 		Devices: []config.DeviceConfig{{
 			Tag: "device123",

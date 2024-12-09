@@ -21,12 +21,13 @@ type Entrypoint struct {
 }
 
 type EntrypointOptions struct {
-	Device            device.Device
-	ListenAddr        string
-	ForwardAuthHeader string
-	BasicAuth         map[string]string
-	AllowedEndpoints  []string
-	OnlyGet           bool
+	Device             device.Device
+	ListenAddr         string
+	ForwardAuthHeader  string
+	ForwardAuthMapping map[string]string
+	BasicAuth          map[string]string
+	AllowedEndpoints   []string
+	OnlyGet            bool
 }
 
 func NewEntrypoint(options EntrypointOptions) *Entrypoint {

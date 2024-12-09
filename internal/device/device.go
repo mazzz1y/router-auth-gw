@@ -38,11 +38,6 @@ func NewDeviceManager(cfg []config.DeviceConfig, auth bool) (*DeviceManager, err
 	return deviceManager, nil
 }
 
-func (dm *DeviceManager) GetDeviceByTag(tag string) (Device, bool) {
-	device, exists := dm.Devices[tag]
-	return device, exists
-}
-
 func initClients(c config.DeviceConfig, auth bool) ([]User, error) {
 	users := make([]User, len(c.Users))
 	for i, v := range c.Users {

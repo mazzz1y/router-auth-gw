@@ -3,10 +3,10 @@ package entrypoint
 import (
 	"context"
 	"fmt"
-	"github.com/mazzz1y/keenetic-auth-gw/internal/device"
-	"github.com/mazzz1y/keenetic-auth-gw/pkg/keenetic"
 	"net/http"
 	"strings"
+
+	"github.com/mazzz1y/keenetic-auth-gw/pkg/keenetic"
 )
 
 func (e *Entrypoint) authenticateMiddleware(next http.HandlerFunc) http.HandlerFunc {
@@ -46,7 +46,7 @@ func (e *Entrypoint) authenticate(r *http.Request) (keenetic.ClientWrapper, erro
 		if user == "" {
 			return nil, fmt.Errorf("missing forward auth header: %s", header)
 		}
-		client, ok := getClientByName(e.Options.Device, user)
+		client, ok := e.getClientByName(user)
 		if !ok {
 			return nil, fmt.Errorf("user not found for forward auth header: %s", user)
 		}
@@ -93,8 +93,12 @@ func (e *Entrypoint) isAllowed(r *http.Request) error {
 	return fmt.Errorf("forbidden")
 }
 
-func getClientByName(device device.Device, name string) (keenetic.ClientWrapper, bool) {
-	for _, user := range device.Users {
+func (e *Entrypoint) getClientByName(name string) (keenetic.ClientWrapper, bool) {
+	if len(e.Options.ForwardAuthMapping) > 0 {
+		name = e.Options.ForwardAuthMapping[name]
+	}
+
+	for _, user := range e.Options.Device.Users {
 		if user.Name == name {
 			return user.Client, true
 		}

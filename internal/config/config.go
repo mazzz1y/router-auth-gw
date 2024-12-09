@@ -3,9 +3,10 @@ package config
 import (
 	"bytes"
 	"fmt"
-	"gopkg.in/yaml.v3"
 	"io"
 	"os"
+
+	"gopkg.in/yaml.v3"
 )
 
 type Config struct {
@@ -14,12 +15,12 @@ type Config struct {
 }
 
 type EntrypointConfig struct {
-	Listen              string            `yaml:"listen"`
-	DeviceTag           string            `yaml:"device_tag"`
-	ReadOnly            bool              `yaml:"read_only,omitempty"`
-	ForwardedAuthHeader string            `yaml:"forwarded_auth_header,omitempty"`
-	BasicAuth           []BasicAuthConfig `yaml:"basic_auth,omitempty"`
-	AllowedEndpoints    []string          `yaml:"allowed_endpoints"`
+	Listen           string            `yaml:"listen"`
+	DeviceTag        string            `yaml:"device_tag"`
+	ReadOnly         bool              `yaml:"read_only,omitempty"`
+	ForwardAuth      ForwardAuthConfig `yaml:"forward_auth,omitempty"`
+	BasicAuth        []BasicAuthConfig `yaml:"basic_auth,omitempty"`
+	AllowedEndpoints []string          `yaml:"allowed_endpoints"`
 }
 
 type DeviceConfig struct {
@@ -37,6 +38,11 @@ type UserConfig struct {
 type BasicAuthConfig struct {
 	Username string `yaml:"username"`
 	Password string `yaml:"password"`
+}
+
+type ForwardAuthConfig struct {
+	Header  string            `yaml:"header"`
+	Mapping map[string]string `yaml:"mapping"`
 }
 
 // BasicAuthMap converts a list of BasicAuthConfig entries into a map for easy lookup
