@@ -2,11 +2,12 @@ package keenetic_test
 
 import (
 	"encoding/json"
-	"github.com/mazzz1y/keenetic-auth-gw/pkg/keenetic"
-	"github.com/stretchr/testify/assert"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+
+	"github.com/mazzz1y/router-auth-gw/pkg/keenetic"
+	"github.com/stretchr/testify/assert"
 )
 
 const (

@@ -14,11 +14,6 @@ import (
 	"time"
 )
 
-type ClientWrapper interface {
-	RequestWithAuth(method, endpoint, body string) (*http.Response, error)
-	Auth() error
-}
-
 type Client struct {
 	URL      string
 	Username string

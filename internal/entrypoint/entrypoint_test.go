@@ -7,7 +7,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/mazzz1y/keenetic-auth-gw/internal/device"
+	"github.com/mazzz1y/router-auth-gw/internal/device"
 
 	"github.com/stretchr/testify/assert"
 )

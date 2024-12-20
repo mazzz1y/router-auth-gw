@@ -5,8 +5,7 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/mazzz1y/keenetic-auth-gw/internal/device"
-	"github.com/mazzz1y/keenetic-auth-gw/pkg/keenetic"
+	"github.com/mazzz1y/router-auth-gw/internal/device"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 )
@@ -49,7 +48,7 @@ func (e *Entrypoint) Start() error {
 }
 
 func (e *Entrypoint) handleRequest(w http.ResponseWriter, r *http.Request) {
-	client, ok := r.Context().Value(clientContextKey).(keenetic.ClientWrapper)
+	client, ok := r.Context().Value(clientContextKey).(device.ClientWrapper)
 	if !ok {
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		e.log.Error().Msg("getting user context error")
@@ -64,7 +63,7 @@ func (e *Entrypoint) handleRequest(w http.ResponseWriter, r *http.Request) {
 	e.handleProxyRequest(w, r, client)
 }
 
-func (e *Entrypoint) handleProxyRequest(w http.ResponseWriter, r *http.Request, c keenetic.ClientWrapper) {
+func (e *Entrypoint) handleProxyRequest(w http.ResponseWriter, r *http.Request, c device.ClientWrapper) {
 	proxyBody, err := io.ReadAll(r.Body)
 	if err != nil {
 		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)

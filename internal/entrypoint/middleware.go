@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/mazzz1y/keenetic-auth-gw/pkg/keenetic"
+	"github.com/mazzz1y/router-auth-gw/internal/device"
 )
 
 func (e *Entrypoint) authenticateMiddleware(next http.HandlerFunc) http.HandlerFunc {
@@ -40,7 +40,7 @@ func (e *Entrypoint) isAllowedMiddleware(next http.HandlerFunc) http.HandlerFunc
 	}
 }
 
-func (e *Entrypoint) authenticate(r *http.Request) (keenetic.ClientWrapper, error) {
+func (e *Entrypoint) authenticate(r *http.Request) (device.ClientWrapper, error) {
 	if header := e.Options.ForwardAuthHeader; header != "" {
 		user := r.Header.Get(header)
 		if user == "" {
@@ -93,7 +93,7 @@ func (e *Entrypoint) isAllowed(r *http.Request) error {
 	return fmt.Errorf("forbidden")
 }
 
-func (e *Entrypoint) getClientByName(name string) (keenetic.ClientWrapper, bool) {
+func (e *Entrypoint) getClientByName(name string) (device.ClientWrapper, bool) {
 	if len(e.Options.ForwardAuthMapping) > 0 {
 		name = e.Options.ForwardAuthMapping[name]
 	}
