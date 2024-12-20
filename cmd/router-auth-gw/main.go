@@ -4,9 +4,9 @@ import (
 	"os"
 	"sync"
 
-	"github.com/mazzz1y/keenetic-auth-gw/internal/config"
-	"github.com/mazzz1y/keenetic-auth-gw/internal/device"
-	"github.com/mazzz1y/keenetic-auth-gw/internal/entrypoint"
+	"github.com/mazzz1y/router-auth-gw/internal/config"
+	"github.com/mazzz1y/router-auth-gw/internal/device"
+	"github.com/mazzz1y/router-auth-gw/internal/entrypoint"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"github.com/urfave/cli/v2"
@@ -16,7 +16,7 @@ var version = "custom"
 
 func main() {
 	app := &cli.App{
-		Name:    "keenetic-auth-gw",
+		Name:    "router-auth-gw",
 		Usage:   "Proxy Gateway for Keenetic Routers",
 		Version: version,
 		Flags: []cli.Flag{

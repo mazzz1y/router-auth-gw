@@ -4,7 +4,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/mazzz1y/keenetic-auth-gw/internal/config"
+	"github.com/mazzz1y/router-auth-gw/internal/config"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -24,6 +24,7 @@ entrypoints:
 devices:
   - tag: "device123"
     url: "http://device.local"
+    type: "keenetic"
     users:
       - username: "user1"
         password: "pass1"
@@ -56,8 +57,9 @@ func TestLoadConfig_Success(t *testing.T) {
 			},
 		}},
 		Devices: []config.DeviceConfig{{
-			Tag: "device123",
-			URL: "http://device.local",
+			Tag:  "device123",
+			URL:  "http://device.local",
+			Type: "keenetic",
 			Users: []config.UserConfig{{
 				Username: "user1",
 				Password: "pass1",

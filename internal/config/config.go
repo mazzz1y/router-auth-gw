@@ -25,6 +25,7 @@ type EntrypointConfig struct {
 
 type DeviceConfig struct {
 	Tag      string       `yaml:"tag"`
+	Type     string       `yaml:"type"`
 	URL      string       `yaml:"url"`
 	ProxyUrl string       `yaml:"proxy_url,omitempty"`
 	Users    []UserConfig `yaml:"users"`
