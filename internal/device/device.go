@@ -36,7 +36,7 @@ func NewDeviceManager(cfg []config.DeviceConfig, auth bool) (*DeviceManager, err
 	for _, cfgDevice := range cfg {
 		users, err := initClients(cfgDevice, auth)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("%s: %v", cfgDevice.URL, err)
 		}
 
 		deviceManager.Devices[cfgDevice.Tag] = Device{

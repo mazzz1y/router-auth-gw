@@ -19,6 +19,7 @@ import (
 
 type Client struct {
 	URL       string
+	RPCUrl    string
 	Username  string
 	Password  string
 	Client    *http.Client
@@ -27,9 +28,10 @@ type Client struct {
 
 func NewClient(baseUrl, proxyURL, username, password string) *Client {
 	jar, _ := cookiejar.New(nil)
-
+	url := strings.TrimRight(baseUrl, "/")
 	return &Client{
 		URL:      strings.TrimRight(baseUrl, "/"),
+		RPCUrl:   url + "/rpc",
 		Username: username,
 		Password: password,
 		Client: &http.Client{
@@ -46,10 +48,9 @@ func (kc *Client) Auth() error {
 		return err
 	}
 
-	loginHash := kc.generateLoginHash(salt, nonce)
-	authPayload := kc.buildAuthPayload(loginHash)
+	authPayload := buildAuthPayload(kc.Username, kc.Password, salt, nonce)
 
-	res, err := kc.request("POST", kc.URL+"/rpc", authPayload)
+	res, err := kc.request("POST", kc.RPCUrl, authPayload)
 	if err != nil {
 		return err
 	}
@@ -59,16 +60,12 @@ func (kc *Client) Auth() error {
 		return errors.New("auth failed")
 	}
 
-	return kc.extractSessionID(res)
+	return kc.extractSid(res)
 }
 
-func (kc *Client) RequestWithAuth(method, endpoint, body string) (*http.Response, error) {
-	urlParsed, err := kc.prepareURL(endpoint)
-	if err != nil {
-		return nil, err
-	}
-
-	res, err := kc.request(method, urlParsed.String(), body)
+func (kc *Client) RequestWithAuth(method, path, body string) (*http.Response, error) {
+	url := kc.URL + path
+	res, err := kc.request(method, url, body)
 	if err != nil {
 		return nil, err
 	}
@@ -77,54 +74,58 @@ func (kc *Client) RequestWithAuth(method, endpoint, body string) (*http.Response
 		if err = kc.Auth(); err != nil {
 			return nil, err
 		}
-		return kc.request(method, urlParsed.String(), body)
+		return kc.request(method, url, body)
 	}
 
 	cleanResponseHeaders(res)
 	return res, nil
 }
 
-func (kc *Client) getSaltAndNonce() (string, string, error) {
-	payload := kc.buildChallengePayload()
-	response, err := kc.request("POST", kc.URL+"/rpc", payload)
-	if err != nil {
-		return "", "", err
-	}
-	defer response.Body.Close()
-
-	return kc.parseSaltAndNonce(response)
-}
-
-func (kc *Client) generateLoginHash(salt, nonce string) string {
-	hashValue := kc.generateHash(salt, kc.Password)
-	loginData := fmt.Sprintf("root:%s:%s", hashValue, nonce)
-	hash := md5.Sum([]byte(loginData))
-	return hex.EncodeToString(hash[:])
-}
-
-func (kc *Client) generateHash(salt, pass string) string {
-	return password.MD5.Crypt([]byte(pass), []byte(salt), nil)
-}
-
-func (kc *Client) request(method, urlStr, body string) (*http.Response, error) {
-	if strings.Contains(urlStr, "/rpc") {
-		body = kc.updateRequestBodyWithSessionID(body)
+func (kc *Client) request(method, url, body string) (*http.Response, error) {
+	if url == kc.RPCUrl {
+		body = kc.replaceSid(body)
 	}
 
-	req, err := http.NewRequest(method, urlStr, bytes.NewBuffer([]byte(body)))
+	req, err := http.NewRequest(method, url, bytes.NewBuffer([]byte(body)))
 	if err != nil {
 		return nil, err
 	}
-	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := kc.Client.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("failed to make request: %v", err)
 	}
+
 	return resp, nil
 }
 
-func (kc *Client) updateRequestBodyWithSessionID(body string) string {
+func (kc *Client) getSaltAndNonce() (string, string, error) {
+	payload := buildChallengePayload(kc.Username)
+	response, err := kc.request("POST", kc.RPCUrl, payload)
+	if err != nil {
+		return "", "", err
+	}
+	defer response.Body.Close()
+
+	return parseSaltAndNonce(response)
+}
+
+func (kc *Client) extractSid(res *http.Response) error {
+	var response map[string]interface{}
+	if err := json.NewDecoder(res.Body).Decode(&response); err != nil {
+		return err
+	}
+
+	sid, ok := response["result"].(map[string]interface{})["sid"].(string)
+	if !ok {
+		return errors.New("failed to extract session id")
+	}
+
+	kc.SessionID = sid
+	return nil
+}
+
+func (kc *Client) replaceSid(body string) string {
 	var payload map[string]interface{}
 	if err := json.Unmarshal([]byte(body), &payload); err == nil {
 		if paramsArray, ok := payload["params"].([]interface{}); ok && len(paramsArray) > 0 {
@@ -144,45 +145,7 @@ func (kc *Client) updateRequestBodyWithSessionID(body string) string {
 	return body
 }
 
-func (kc *Client) buildAuthPayload(loginHash string) string {
-	authPayload := map[string]interface{}{
-		"jsonrpc": "2.0",
-		"id":      1,
-		"method":  "login",
-		"params": map[string]string{
-			"username": kc.Username,
-			"hash":     loginHash,
-		},
-	}
-	payloadBytes, _ := json.Marshal(authPayload)
-	return string(payloadBytes)
-}
-
-func (kc *Client) extractSessionID(res *http.Response) error {
-	var response map[string]interface{}
-	if err := json.NewDecoder(res.Body).Decode(&response); err != nil {
-		return err
-	}
-
-	sid, ok := response["result"].(map[string]interface{})["sid"].(string)
-	if !ok {
-		return errors.New("failed to extract session id")
-	}
-
-	kc.SessionID = sid
-	return nil
-}
-
-func (kc *Client) prepareURL(endpoint string) (*url.URL, error) {
-	endpoint = strings.TrimLeft(endpoint, "/")
-	return url.Parse(kc.URL + "/" + endpoint)
-}
-
-func (kc *Client) buildChallengePayload() string {
-	return fmt.Sprintf(`{"jsonrpc":"2.0","id":1,"method":"challenge","params":{"username":"%s"}}`, kc.Username)
-}
-
-func (kc *Client) parseSaltAndNonce(response *http.Response) (string, string, error) {
+func parseSaltAndNonce(response *http.Response) (string, string, error) {
 	var result map[string]interface{}
 	json.NewDecoder(response.Body).Decode(&result)
 	res, ok := result["result"].(map[string]interface{})
@@ -195,13 +158,40 @@ func (kc *Client) parseSaltAndNonce(response *http.Response) (string, string, er
 	if !saltOk || !nonceOk {
 		return "", "", errors.New("missing salt or nonce in response")
 	}
+
 	return salt, nonce, nil
 }
 
-func cleanResponseHeaders(res *http.Response) {
-	res.Header.Del("Set-Cookie")
-	// This is required by the frontend. Otherwise, it will loop until the cookie is set.
-	res.Header.Set("Set-Cookie", "Admin-Token=1337")
+func buildChallengePayload(user string) string {
+	authPayload := map[string]interface{}{
+		"jsonrpc": "2.0",
+		"id":      1,
+		"method":  "challenge",
+		"params": map[string]string{
+			"username": user,
+		},
+	}
+	payloadBytes, _ := json.Marshal(authPayload)
+	return string(payloadBytes)
+}
+
+func buildAuthPayload(user, pass, salt, nonce string) string {
+	passwd := password.MD5.Crypt([]byte(pass), []byte(salt), nil)
+	loginData := fmt.Sprintf("%s:%s:%s", user, passwd, nonce)
+	hash := md5.Sum([]byte(loginData))
+	loginHash := hex.EncodeToString(hash[:])
+
+	authPayload := map[string]interface{}{
+		"jsonrpc": "2.0",
+		"id":      1,
+		"method":  "login",
+		"params": map[string]string{
+			"username": user,
+			"hash":     loginHash,
+		},
+	}
+	payloadBytes, _ := json.Marshal(authPayload)
+	return string(payloadBytes)
 }
 
 func isAccessDenied(res *http.Response) bool {
@@ -236,4 +226,10 @@ func createTransport(proxyURL string) *http.Transport {
 	}
 
 	return &http.Transport{Proxy: proxyFunc}
+}
+
+func cleanResponseHeaders(res *http.Response) {
+	res.Header.Del("Set-Cookie")
+	// This is required by the frontend. Otherwise, it will loop until the cookie is set.
+	res.Header.Set("Set-Cookie", "Admin-Token=1337")
 }

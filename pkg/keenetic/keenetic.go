@@ -44,12 +44,8 @@ func (kc *Client) Auth() error {
 		return err
 	}
 
-	passwordHash := kc.generatePasswordHash(challenge, realm)
-	authPayload := map[string]string{"login": kc.Username, "password": passwordHash}
-
-	payloadBytes, _ := json.Marshal(authPayload)
-
-	res, err := kc.request("POST", kc.URL+"/auth", string(payloadBytes))
+	payload := buildAuthPayload(kc.Username, kc.Password, challenge, realm)
+	res, err := kc.request("POST", kc.URL+"/auth", payload)
 	if err != nil {
 		return err
 	}
@@ -126,12 +122,15 @@ func (kc *Client) request(method, url, body string) (*http.Response, error) {
 	return resp, nil
 }
 
-func (kc *Client) generatePasswordHash(challenge, realm string) string {
-	md5Hash := md5.Sum([]byte(fmt.Sprintf("%s:%s:%s", kc.Username, realm, kc.Password)))
+func buildAuthPayload(user, pass, challenge, realm string) string {
+	md5Hash := md5.Sum([]byte(fmt.Sprintf("%s:%s:%s", user, realm, pass)))
 	md5Hex := hex.EncodeToString(md5Hash[:])
-
 	shaHash := sha256.Sum256([]byte(challenge + md5Hex))
-	return hex.EncodeToString(shaHash[:])
+	passwordHash := hex.EncodeToString(shaHash[:])
+
+	authPayload := map[string]string{"login": user, "password": passwordHash}
+	payload, _ := json.Marshal(authPayload)
+	return string(payload)
 }
 
 func createTransport(proxyURL string) *http.Transport {

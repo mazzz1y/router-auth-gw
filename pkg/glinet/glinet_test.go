@@ -11,7 +11,7 @@ import (
 )
 
 const (
-	mockUser    = "username"
+	mockUser    = "root"
 	mockPass    = "password"
 	mockSession = "mock-session-id"
 	mockSalt    = "mock-salt"

@@ -64,18 +64,19 @@ func (e *Entrypoint) handleRequest(w http.ResponseWriter, r *http.Request) {
 }
 
 func (e *Entrypoint) handleProxyRequest(w http.ResponseWriter, r *http.Request, c device.ClientWrapper) {
+	uri := r.URL.RequestURI()
 	proxyBody, err := io.ReadAll(r.Body)
 	if err != nil {
 		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
-		e.log.Error().Err(err).Str("uri", r.URL.RequestURI()).Msg("failed to read request body")
+		e.log.Error().Err(err).Str("uri", uri).Msg("failed to read request body")
 		return
 	}
 	defer r.Body.Close()
 
-	resp, err := c.RequestWithAuth(r.Method, r.URL.RequestURI(), string(proxyBody))
+	resp, err := c.RequestWithAuth(r.Method, uri, string(proxyBody))
 	if err != nil {
 		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
-		e.log.Error().Err(err).Str("uri", r.URL.RequestURI()).Msg("request to backend failed")
+		e.log.Error().Err(err).Str("uri", uri).Msg("request to backend failed")
 		return
 	}
 	defer resp.Body.Close()
@@ -84,7 +85,7 @@ func (e *Entrypoint) handleProxyRequest(w http.ResponseWriter, r *http.Request, 
 	w.WriteHeader(resp.StatusCode)
 
 	if _, err := io.Copy(w, resp.Body); err != nil {
-		e.log.Error().Err(err).Str("uri", r.URL.RequestURI()).Msg("failed to write response body")
+		e.log.Error().Err(err).Str("uri", uri).Msg("failed to write response body")
 		return
 	}
 }
