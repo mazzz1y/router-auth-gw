@@ -12,6 +12,8 @@ import (
 	"net/url"
 	"strings"
 	"time"
+
+	"golang.org/x/net/websocket"
 )
 
 type Client struct {
@@ -59,7 +61,7 @@ func (kc *Client) Auth() error {
 	return nil
 }
 
-func (kc *Client) RequestWithAuth(method, endpoint, body string) (*http.Response, error) {
+func (kc *Client) Request(method, endpoint, body string) (*http.Response, error) {
 	endpoint = strings.TrimLeft(endpoint, "/")
 	urlParsed, err := url.Parse(kc.URL + "/" + endpoint)
 	if err != nil {
@@ -80,8 +82,11 @@ func (kc *Client) RequestWithAuth(method, endpoint, body string) (*http.Response
 	}
 
 	res.Header.Del("Set-Cookie")
-
 	return res, nil
+}
+
+func (kc *Client) Websocket() (*websocket.Conn, error) {
+	return nil, errors.New("websocket not supported")
 }
 
 func (kc *Client) getChallenge() (string, string, error) {

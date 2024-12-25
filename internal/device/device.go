@@ -7,6 +7,7 @@ import (
 	"github.com/mazzz1y/router-auth-gw/internal/config"
 	"github.com/mazzz1y/router-auth-gw/pkg/glinet"
 	"github.com/mazzz1y/router-auth-gw/pkg/keenetic"
+	"golang.org/x/net/websocket"
 )
 
 type Device struct {
@@ -24,7 +25,8 @@ type DeviceManager struct {
 }
 
 type ClientWrapper interface {
-	RequestWithAuth(method, endpoint, body string) (*http.Response, error)
+	Request(method, endpoint, body string) (*http.Response, error)
+	Websocket() (*websocket.Conn, error)
 	Auth() error
 }
 

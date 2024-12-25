@@ -15,11 +15,13 @@ import (
 	"time"
 
 	"github.com/nathanaelle/password/v2"
+	"golang.org/x/net/websocket"
 )
 
 type Client struct {
 	URL       string
 	RPCUrl    string
+	WSUrl     string
 	Username  string
 	Password  string
 	Client    *http.Client
@@ -29,9 +31,11 @@ type Client struct {
 func NewClient(baseUrl, proxyURL, username, password string) *Client {
 	jar, _ := cookiejar.New(nil)
 	url := strings.TrimRight(baseUrl, "/")
+
 	return &Client{
-		URL:      strings.TrimRight(baseUrl, "/"),
+		URL:      url,
 		RPCUrl:   url + "/rpc",
+		WSUrl:    strings.Replace(url, "http", "ws", 1) + "/ws",
 		Username: username,
 		Password: password,
 		Client: &http.Client{
@@ -49,7 +53,6 @@ func (kc *Client) Auth() error {
 	}
 
 	authPayload := buildAuthPayload(kc.Username, kc.Password, salt, nonce)
-
 	res, err := kc.request("POST", kc.RPCUrl, authPayload)
 	if err != nil {
 		return err
@@ -63,7 +66,7 @@ func (kc *Client) Auth() error {
 	return kc.extractSid(res)
 }
 
-func (kc *Client) RequestWithAuth(method, path, body string) (*http.Response, error) {
+func (kc *Client) Request(method, path, body string) (*http.Response, error) {
 	url := kc.URL + path
 	res, err := kc.request(method, url, body)
 	if err != nil {
@@ -79,6 +82,16 @@ func (kc *Client) RequestWithAuth(method, path, body string) (*http.Response, er
 
 	cleanResponseHeaders(res)
 	return res, nil
+}
+
+func (kc *Client) Websocket() (*websocket.Conn, error) {
+	wsUrl := kc.WSUrl + fmt.Sprintf("?sid=%s", kc.SessionID)
+	config, err := websocket.NewConfig(wsUrl, kc.URL)
+	if err != nil {
+		return nil, err
+	}
+
+	return websocket.DialConfig(config)
 }
 
 func (kc *Client) request(method, url, body string) (*http.Response, error) {

@@ -15,9 +15,6 @@ Currently supported devices:
 - [Keenetic](https://keenetic.com)
 - [GL.iNet](https://www.gl-inet.com)
 
-Missing features (yet):
-- WebSocket Proxying
-
 This app is a fork of `keenetic-auth-gw`, and I decided to add support for other devices. It is open for PRs for additional device support.
 
 *I created this app for personal use, so there may be some issues or inconsistencies, and the design can change at any time*

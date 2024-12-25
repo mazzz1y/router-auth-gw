@@ -78,14 +78,14 @@ func TestAuth(t *testing.T) {
 	})
 }
 
-func TestRequestWithAuth(t *testing.T) {
+func TestRequest(t *testing.T) {
 	server := mockServer()
 	defer server.Close()
 
 	c := keenetic.NewClient(server.URL, "", mockUser, mockPass)
 	assert.NotNil(t, c)
 
-	response, err := c.RequestWithAuth(http.MethodGet, "/test-endpoint", "")
+	response, err := c.Request(http.MethodGet, "/test-endpoint", "")
 	assert.NoError(t, err)
 	defer response.Body.Close()
 

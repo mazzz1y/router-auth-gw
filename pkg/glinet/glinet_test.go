@@ -89,14 +89,14 @@ func TestAuth(t *testing.T) {
 	})
 }
 
-func TestRequestWithAuth(t *testing.T) {
+func TestRequest(t *testing.T) {
 	server := mockServer()
 	defer server.Close()
 
 	c := glinet.NewClient(server.URL, "", mockUser, mockPass)
 	assert.NotNil(t, c)
 
-	response, err := c.RequestWithAuth(http.MethodPost, "/rpc", `{"method":"someMethod","params":{}}`)
+	response, err := c.Request(http.MethodPost, "/rpc", `{"method":"someMethod","params":{}}`)
 	assert.NoError(t, err)
 	defer response.Body.Close()
 

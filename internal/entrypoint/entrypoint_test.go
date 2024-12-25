@@ -2,12 +2,14 @@ package entrypoint
 
 import (
 	"bytes"
+	"errors"
 	"io"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
 	"github.com/mazzz1y/router-auth-gw/internal/device"
+	"golang.org/x/net/websocket"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -18,12 +20,16 @@ func (m *MockClient) Auth() error {
 	return nil
 }
 
-func (m *MockClient) RequestWithAuth(_, _, _ string) (*http.Response, error) {
+func (m *MockClient) Request(_, _, _ string) (*http.Response, error) {
 	return &http.Response{
 		StatusCode: http.StatusOK,
 		Body:       io.NopCloser(bytes.NewReader([]byte("mock response"))),
 		Header:     make(http.Header),
 	}, nil
+}
+
+func (m *MockClient) Websocket() (*websocket.Conn, error) {
+	return nil, errors.New("not implemented")
 }
 
 func NewMockDevice() device.Device {
