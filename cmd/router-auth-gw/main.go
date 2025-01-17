@@ -90,13 +90,14 @@ func startServer(dm *device.DeviceManager, entryCfg config.EntrypointConfig, wg 
 	}
 
 	err := entrypoint.NewEntrypoint(entrypoint.EntrypointOptions{
-		Device:             d,
-		ListenAddr:         entryCfg.Listen,
-		ForwardAuthHeader:  entryCfg.ForwardAuth.Header,
-		ForwardAuthMapping: entryCfg.ForwardAuth.Mapping,
-		BasicAuth:          entryCfg.BasicAuthMap(),
-		AllowedEndpoints:   entryCfg.AllowedEndpoints,
-		OnlyGet:            entryCfg.ReadOnly,
+		Device:              d,
+		ListenAddr:          entryCfg.Listen,
+		ForwardAuthHeader:   entryCfg.ForwardAuth.Header,
+		ForwardAuthMapping:  entryCfg.ForwardAuth.Mapping,
+		BasicAuth:           entryCfg.BasicAuthMap(),
+		AllowedEndpoints:    entryCfg.AllowedEndpoints,
+		BypassAuthEndpoints: entryCfg.BypassAuthEndpoints,
+		OnlyGet:             entryCfg.ReadOnly,
 	}).Start()
 
 	if err != nil {

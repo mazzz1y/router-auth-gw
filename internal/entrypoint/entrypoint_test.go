@@ -46,16 +46,32 @@ func NewMockDevice() device.Device {
 
 func TestServerForwardedAuth(t *testing.T) {
 	options := EntrypointOptions{
-		Device:            NewMockDevice(),
-		ForwardAuthHeader: "X-Forwarded-User",
-		OnlyGet:           true,
+		Device:              NewMockDevice(),
+		ForwardAuthHeader:   "X-Forwarded-User",
+		OnlyGet:             true,
+		BypassAuthEndpoints: []string{"/auth-bypass"},
 	}
 
 	server := NewEntrypoint(options)
 
 	t.Run("Authorized access", func(t *testing.T) {
-		req := httptest.NewRequest(http.MethodGet, "/allowed", nil)
+		req := httptest.NewRequest(http.MethodGet, "/behind-auth", nil)
 		req.Header.Set("X-Forwarded-User", "user")
+
+		w := httptest.NewRecorder()
+
+		handler := server.authenticateMiddleware(server.handleRequest)
+		handler.ServeHTTP(w, req)
+
+		resp := w.Result()
+		body, _ := io.ReadAll(resp.Body)
+
+		assert.Equal(t, http.StatusOK, resp.StatusCode)
+		assert.Contains(t, string(body), "mock response")
+	})
+
+	t.Run("Bypassed access", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodGet, "/auth-bypass?t=1", nil)
 
 		w := httptest.NewRecorder()
 

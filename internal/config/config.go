@@ -15,12 +15,13 @@ type Config struct {
 }
 
 type EntrypointConfig struct {
-	Listen           string            `yaml:"listen"`
-	DeviceTag        string            `yaml:"device_tag"`
-	ReadOnly         bool              `yaml:"read_only,omitempty"`
-	ForwardAuth      ForwardAuthConfig `yaml:"forward_auth,omitempty"`
-	BasicAuth        []BasicAuthConfig `yaml:"basic_auth,omitempty"`
-	AllowedEndpoints []string          `yaml:"allowed_endpoints"`
+	Listen              string            `yaml:"listen"`
+	DeviceTag           string            `yaml:"device_tag"`
+	ReadOnly            bool              `yaml:"read_only,omitempty"`
+	ForwardAuth         ForwardAuthConfig `yaml:"forward_auth,omitempty"`
+	BasicAuth           []BasicAuthConfig `yaml:"basic_auth,omitempty"`
+	AllowedEndpoints    []string          `yaml:"allowed_endpoints"`
+	BypassAuthEndpoints []string          `yaml:"bypass_auth_endpoints"`
 }
 
 type DeviceConfig struct {

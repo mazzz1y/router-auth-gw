@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	"strings"
+	"net/url"
 
 	"github.com/mazzz1y/router-auth-gw/internal/device"
 )
@@ -26,12 +26,22 @@ func (e *Entrypoint) authenticateMiddleware(next http.HandlerFunc) http.HandlerF
 	}
 }
 
-func (e *Entrypoint) isAllowedMiddleware(next http.HandlerFunc) http.HandlerFunc {
+func (e *Entrypoint) reqAllowedMiddleware(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		if err := e.isAllowed(r); err != nil {
+		var err error
+		if e.Options.OnlyGet && r.Method != http.MethodGet {
+			err = fmt.Errorf("method not allowed")
+		}
+
+		uri := r.URL.RequestURI()
+		if len(e.Options.AllowedEndpoints) > 0 && !isURLInArray(e.Options.AllowedEndpoints, uri) {
+			err = fmt.Errorf("uri not allowed")
+		}
+
+		if err != nil {
 			e.log.Info().
 				Str("from", r.RemoteAddr).
-				Str("uri", r.URL.RequestURI()).
+				Str("uri", uri).
 				Msg("request not allowed")
 			http.Error(w, http.StatusText(http.StatusForbidden), http.StatusForbidden)
 			return
@@ -41,29 +51,17 @@ func (e *Entrypoint) isAllowedMiddleware(next http.HandlerFunc) http.HandlerFunc
 }
 
 func (e *Entrypoint) authenticate(r *http.Request) (device.ClientWrapper, error) {
-	if header := e.Options.ForwardAuthHeader; header != "" {
-		user := r.Header.Get(header)
-		if user == "" {
-			return nil, fmt.Errorf("missing forward auth header: %s", header)
-		}
-		client, ok := e.getClientByName(user)
-		if !ok {
-			return nil, fmt.Errorf("user not found for forward auth header: %s", user)
-		}
-		return client, nil
+	if isURLInArray(e.Options.BypassAuthEndpoints, r.URL.RequestURI()) {
+		return e.Options.Device.Users[0].Client, nil
+	}
+
+	if e.Options.ForwardAuthHeader != "" {
+		return e.forwardAuth(r)
 	}
 
 	if len(e.Options.BasicAuth) > 0 {
-		user, pass, ok := r.BasicAuth()
-		if !ok {
-			return nil, fmt.Errorf("basic auth credentials not provided")
-		}
-		storedPass, exists := e.Options.BasicAuth[user]
-		if !exists {
-			return nil, fmt.Errorf("basic auth user not found: %s", user)
-		}
-		if storedPass != pass {
-			return nil, fmt.Errorf("invalid password for user: %s", user)
+		if err := e.basicAuth(r); err != nil {
+			return nil, err
 		}
 	}
 
@@ -74,26 +72,39 @@ func (e *Entrypoint) authenticate(r *http.Request) (device.ClientWrapper, error)
 	return nil, fmt.Errorf("no valid authentication method found")
 }
 
-func (e *Entrypoint) isAllowed(r *http.Request) error {
-	if e.Options.OnlyGet && r.Method != http.MethodGet {
-		return fmt.Errorf("method not allowed")
+func (e *Entrypoint) forwardAuth(r *http.Request) (device.ClientWrapper, error) {
+	user := r.Header.Get(e.Options.ForwardAuthHeader)
+	if user == "" {
+		return nil, fmt.Errorf("missing forward auth header: %s", e.Options.ForwardAuthHeader)
 	}
 
-	if len(e.Options.AllowedEndpoints) == 0 {
-		return nil
+	client, ok := e.client(user)
+	if !ok {
+		return nil, fmt.Errorf("user not found for forward auth header: %s", user)
 	}
 
-	reqURI := r.URL.RequestURI()
-	for _, endpoint := range e.Options.AllowedEndpoints {
-		if strings.HasPrefix(reqURI, endpoint) {
-			return nil
-		}
-	}
-
-	return fmt.Errorf("forbidden")
+	return client, nil
 }
 
-func (e *Entrypoint) getClientByName(name string) (device.ClientWrapper, bool) {
+func (e *Entrypoint) basicAuth(r *http.Request) error {
+	user, pass, ok := r.BasicAuth()
+	if !ok {
+		return fmt.Errorf("basic auth credentials not provided")
+	}
+
+	storedPass, exists := e.Options.BasicAuth[user]
+	if !exists {
+		return fmt.Errorf("basic auth user not found: %s", user)
+	}
+
+	if storedPass != pass {
+		return fmt.Errorf("invalid password for user: %s", user)
+	}
+
+	return nil
+}
+
+func (e *Entrypoint) client(name string) (device.ClientWrapper, bool) {
 	if len(e.Options.ForwardAuthMapping) > 0 {
 		name = e.Options.ForwardAuthMapping[name]
 	}
@@ -103,5 +114,21 @@ func (e *Entrypoint) getClientByName(name string) (device.ClientWrapper, bool) {
 			return user.Client, true
 		}
 	}
+
 	return nil, false
+}
+
+func isURLInArray(endpoints []string, uri string) bool {
+	parsedURL, err := url.Parse(uri)
+	if err != nil {
+		return false
+	}
+
+	for _, endpoint := range endpoints {
+		if parsedURL.Path == endpoint {
+			return true
+		}
+	}
+
+	return false
 }

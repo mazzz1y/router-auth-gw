@@ -57,6 +57,8 @@ entrypoints:
       # For example, the user coming from the header 'mazzz1y' will be logged as the 'root' internal user.
       mapping:
         mazzz1y: root
+    bypass_auth_endpoints:
+      - /favicon.ico
 
 devices:
   - tag: keenetic-home

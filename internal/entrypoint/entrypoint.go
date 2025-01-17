@@ -21,13 +21,14 @@ type Entrypoint struct {
 }
 
 type EntrypointOptions struct {
-	Device             device.Device
-	ListenAddr         string
-	ForwardAuthHeader  string
-	ForwardAuthMapping map[string]string
-	BasicAuth          map[string]string
-	AllowedEndpoints   []string
-	OnlyGet            bool
+	Device              device.Device
+	ListenAddr          string
+	ForwardAuthHeader   string
+	ForwardAuthMapping  map[string]string
+	BasicAuth           map[string]string
+	BypassAuthEndpoints []string
+	AllowedEndpoints    []string
+	OnlyGet             bool
 }
 
 func NewEntrypoint(options EntrypointOptions) *Entrypoint {
@@ -42,7 +43,9 @@ func NewEntrypoint(options EntrypointOptions) *Entrypoint {
 
 func (e *Entrypoint) Start() error {
 	mux := http.NewServeMux()
-	handler := e.authenticateMiddleware(e.isAllowedMiddleware(e.handleRequest))
+	handler := e.authenticateMiddleware(
+		e.reqAllowedMiddleware(e.handleRequest),
+	)
 	mux.HandleFunc("/", handler)
 	e.log.Info().Msg("listener started")
 	return http.ListenAndServe(e.Options.ListenAddr, mux)
