@@ -3,9 +3,11 @@ package entrypoint
 import (
 	"bytes"
 	"errors"
+	"golang.org/x/net/html"
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/mazzz1y/router-auth-gw/internal/device"
@@ -45,7 +47,7 @@ func NewMockDevice() device.Device {
 }
 
 func TestServerForwardedAuth(t *testing.T) {
-	options := EntrypointOptions{
+	options := Options{
 		Device:              NewMockDevice(),
 		ForwardAuthHeader:   "X-Forwarded-User",
 		OnlyGet:             true,
@@ -100,7 +102,7 @@ func TestServerForwardedAuth(t *testing.T) {
 }
 
 func TestServerBasicAuth(t *testing.T) {
-	options := EntrypointOptions{
+	options := Options{
 		Device: NewMockDevice(),
 		BasicAuth: map[string]string{
 			"user": "pass",
@@ -152,4 +154,114 @@ func TestServerBasicAuth(t *testing.T) {
 
 		assert.Equal(t, http.StatusUnauthorized, resp.StatusCode)
 	})
+}
+
+func TestUpdateManifestLinks(t *testing.T) {
+	tests := []struct {
+		name           string
+		htmlInput      string
+		expectedOutput string
+	}{
+		{
+			name: "Manifest exists and requires crossorigin",
+			htmlInput: `
+			<!DOCTYPE html>
+			<html>
+			<head>
+				<link rel="stylesheet" href="style.css">
+				<link rel="manifest" href="manifest.json">
+			</head>
+			<body>
+			</body>
+			</html>
+			`,
+			expectedOutput: `
+			<!DOCTYPE html>
+			<html>
+			<head>
+				<link rel="stylesheet" href="style.css">
+				<link rel="manifest" href="manifest.json" crossorigin="use-credentials">
+			</head>
+			<body>
+			</body>
+			</html>
+			`,
+		},
+		{
+			name: "Manifest link does not exist",
+			htmlInput: `
+			<!DOCTYPE html>
+			<html>
+			<head>
+				<link rel="stylesheet" href="style.css">
+			</head>
+			<body>
+			</body>
+			</html>
+			`,
+			expectedOutput: `
+			<!DOCTYPE html>
+			<html>
+			<head>
+				<link rel="stylesheet" href="style.css">
+			</head>
+			<body>
+			</body>
+			</html>
+			`,
+		},
+		{
+			name: "Manifest already has crossorigin",
+			htmlInput: `
+			<!DOCTYPE html>
+			<html>
+			<head>
+				<link rel="stylesheet" href="style.css">
+				<link rel="manifest" href="manifest.json" crossorigin="use-credentials">
+			</head>
+			<body>
+			</body>
+			</html>
+			`,
+			expectedOutput: `
+			<!DOCTYPE html>
+			<html>
+			<head>
+				<link rel="stylesheet" href="style.css">
+				<link rel="manifest" href="manifest.json" crossorigin="use-credentials">
+			</head>
+			<body>
+			</body>
+			</html>
+			`,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			reader := io.NopCloser(strings.NewReader(test.htmlInput))
+			output, err := manifestFix(reader)
+			if err != nil {
+				t.Fatalf("Expected no error, got %v", err)
+			}
+
+			parsedOutput, err := html.Parse(strings.NewReader(string(output)))
+			if err != nil {
+				t.Fatalf("Error parsing output HTML: %v", err)
+			}
+
+			parsedExpectedOutput, err := html.Parse(strings.NewReader(test.expectedOutput))
+			if err != nil {
+				t.Fatalf("Error parsing expected HTML: %v", err)
+			}
+
+			var outputBuf, expectedBuf bytes.Buffer
+			html.Render(&outputBuf, parsedOutput)
+			html.Render(&expectedBuf, parsedExpectedOutput)
+
+			if outputBuf.String() != expectedBuf.String() {
+				t.Errorf("Expected output:\n%s\n\nBut got:\n%s", expectedBuf.String(), outputBuf.String())
+			}
+		})
+	}
 }

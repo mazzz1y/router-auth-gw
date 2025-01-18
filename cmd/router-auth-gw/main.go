@@ -89,7 +89,7 @@ func startServer(dm *device.DeviceManager, entryCfg config.EntrypointConfig, wg 
 		log.Fatal().Msgf("%s: \"%s\" device not found", entryCfg.Listen, entryCfg.DeviceTag)
 	}
 
-	err := entrypoint.NewEntrypoint(entrypoint.EntrypointOptions{
+	err := entrypoint.NewEntrypoint(entrypoint.Options{
 		Device:              d,
 		ListenAddr:          entryCfg.Listen,
 		ForwardAuthHeader:   entryCfg.ForwardAuth.Header,
