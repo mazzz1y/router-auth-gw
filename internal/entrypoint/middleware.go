@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"strings"
 
 	"github.com/mazzz1y/router-auth-gw/internal/device"
 )
@@ -34,7 +35,7 @@ func (e *Entrypoint) reqAllowedMiddleware(next http.HandlerFunc) http.HandlerFun
 		}
 
 		uri := r.URL.RequestURI()
-		if len(e.Options.AllowedEndpoints) > 0 && !isURLInArray(e.Options.AllowedEndpoints, uri) {
+		if len(e.Options.AllowedEndpoints) > 0 && !isURIInSlice(e.Options.AllowedEndpoints, uri) {
 			err = fmt.Errorf("uri not allowed")
 		}
 
@@ -51,7 +52,12 @@ func (e *Entrypoint) reqAllowedMiddleware(next http.HandlerFunc) http.HandlerFun
 }
 
 func (e *Entrypoint) authenticate(r *http.Request) (device.ClientWrapper, error) {
-	if isURLInArray(e.Options.BypassAuthEndpoints, r.URL.RequestURI()) {
+	uri := r.URL.RequestURI()
+
+	bypass := (len(e.Options.BypassAuthEndpoints) > 0 && isURIInSlice(e.Options.BypassAuthEndpoints, uri)) ||
+		isURIBypassed(uri)
+
+	if bypass {
 		return e.Options.Device.Users[0].Client, nil
 	}
 
@@ -118,7 +124,11 @@ func (e *Entrypoint) client(name string) (device.ClientWrapper, bool) {
 	return nil, false
 }
 
-func isURLInArray(endpoints []string, uri string) bool {
+func isURIBypassed(uri string) bool {
+	return strings.HasSuffix(uri, "/favicon.ico")
+}
+
+func isURIInSlice(endpoints []string, uri string) bool {
 	parsedURL, err := url.Parse(uri)
 	if err != nil {
 		return false

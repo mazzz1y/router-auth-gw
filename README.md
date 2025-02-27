@@ -58,7 +58,7 @@ entrypoints:
       mapping:
         mazzz1y: root
     bypass_auth_endpoints:
-      - /favicon.ico
+      - /some-endpoint
 
 devices:
   - tag: keenetic-home
