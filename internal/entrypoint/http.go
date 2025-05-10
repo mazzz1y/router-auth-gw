@@ -2,13 +2,17 @@ package entrypoint
 
 import (
 	"bytes"
+	"context"
 	"io"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/mazzz1y/router-auth-gw/internal/device"
 	"golang.org/x/net/html"
 )
+
+const timeout = 30 * time.Second
 
 func (e *Entrypoint) httpRequest(w http.ResponseWriter, r *http.Request, c device.ClientWrapper) {
 	uri := r.URL.RequestURI()
@@ -20,9 +24,12 @@ func (e *Entrypoint) httpRequest(w http.ResponseWriter, r *http.Request, c devic
 	}
 	defer r.Body.Close()
 
-	resp, err := c.Request(r.Method, uri, string(proxyBody))
+	ctx, cancel := context.WithTimeout(r.Context(), timeout)
+	defer cancel()
+
+	resp, err := c.Request(ctx, r.Method, uri, string(proxyBody))
 	if err != nil {
-		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+		http.Error(w, http.StatusText(http.StatusBadGateway), http.StatusBadGateway)
 		e.log.Error().Err(err).Str("uri", uri).Msg("request to backend failed")
 		return
 	}
@@ -32,7 +39,6 @@ func (e *Entrypoint) httpRequest(w http.ResponseWriter, r *http.Request, c devic
 	if err != nil {
 		e.log.Error().Err(err).Str("uri", uri).Msg("failed to forward response")
 	}
-
 }
 
 func (e *Entrypoint) forwardResponse(resp *http.Response, w http.ResponseWriter) error {

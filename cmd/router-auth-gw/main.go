@@ -66,7 +66,7 @@ func startServersAction(c *cli.Context) error {
 		return err
 	}
 
-	dm, err := device.NewDeviceManager(cfg.Devices, true)
+	dm, err := device.NewDeviceManager(cfg.Devices)
 	if err != nil {
 		return err
 	}
@@ -81,7 +81,7 @@ func startServersAction(c *cli.Context) error {
 	return nil
 }
 
-func startServer(dm *device.DeviceManager, entryCfg config.EntrypointConfig, wg *sync.WaitGroup) {
+func startServer(dm *device.Manager, entryCfg config.EntrypointConfig, wg *sync.WaitGroup) {
 	defer wg.Done()
 
 	d, ok := dm.Devices[entryCfg.DeviceTag]

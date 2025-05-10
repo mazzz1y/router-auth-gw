@@ -1,12 +1,12 @@
-package keenetic_test
+package keenetic
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
-	"github.com/mazzz1y/router-auth-gw/pkg/keenetic"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -66,15 +66,17 @@ func TestAuth(t *testing.T) {
 	server := mockServer()
 	defer server.Close()
 
+	ctx := context.Background()
+
 	t.Run("Success", func(t *testing.T) {
-		c := keenetic.NewClient(server.URL, "", mockUser, mockPass)
+		c := NewClient(server.URL, "", mockUser, mockPass)
 		assert.NotNil(t, c)
-		assert.NoError(t, c.Auth())
+		assert.NoError(t, c.auth(ctx))
 	})
 
 	t.Run("Failed", func(t *testing.T) {
-		c := keenetic.NewClient(server.URL, "", mockUser, "wrong password")
-		assert.Error(t, c.Auth())
+		c := NewClient(server.URL, "", mockUser, "wrong password")
+		assert.Error(t, c.auth(ctx))
 	})
 }
 
@@ -82,10 +84,11 @@ func TestRequest(t *testing.T) {
 	server := mockServer()
 	defer server.Close()
 
-	c := keenetic.NewClient(server.URL, "", mockUser, mockPass)
+	c := NewClient(server.URL, "", mockUser, mockPass)
 	assert.NotNil(t, c)
 
-	response, err := c.Request(http.MethodGet, "/test-endpoint", "")
+	ctx := context.Background()
+	response, err := c.Request(ctx, http.MethodGet, "/test-endpoint", "")
 	assert.NoError(t, err)
 	defer response.Body.Close()
 

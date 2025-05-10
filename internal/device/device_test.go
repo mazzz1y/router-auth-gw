@@ -27,7 +27,7 @@ var mockConfig = &config.Config{
 func TestNewDeviceManager(t *testing.T) {
 	t.Run("Success", func(t *testing.T) {
 
-		manager, err := device.NewDeviceManager(mockConfig.Devices, false)
+		manager, err := device.NewDeviceManager(mockConfig.Devices)
 		assert.NoError(t, err)
 		assert.Equal(t, 1, len(manager.Devices))
 		assert.Equal(t, "Device1", manager.Devices["Device1"].Tag)

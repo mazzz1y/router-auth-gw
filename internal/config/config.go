@@ -3,10 +3,9 @@ package config
 import (
 	"bytes"
 	"fmt"
+	"gopkg.in/yaml.v3"
 	"io"
 	"os"
-
-	"gopkg.in/yaml.v3"
 )
 
 type Config struct {
@@ -47,7 +46,6 @@ type ForwardAuthConfig struct {
 	Mapping map[string]string `yaml:"mapping"`
 }
 
-// BasicAuthMap converts a list of BasicAuthConfig entries into a map for easy lookup
 func (ec EntrypointConfig) BasicAuthMap() map[string]string {
 	basicAuthMap := make(map[string]string)
 	for _, e := range ec.BasicAuth {

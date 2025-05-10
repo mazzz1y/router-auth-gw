@@ -2,6 +2,7 @@ package entrypoint
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"golang.org/x/net/html"
 	"io"
@@ -18,11 +19,11 @@ import (
 
 type MockClient struct{}
 
-func (m *MockClient) Auth() error {
+func (m *MockClient) Auth(_ context.Context) error {
 	return nil
 }
 
-func (m *MockClient) Request(_, _, _ string) (*http.Response, error) {
+func (m *MockClient) Request(_ context.Context, _, _, _ string) (*http.Response, error) {
 	return &http.Response{
 		StatusCode: http.StatusOK,
 		Body:       io.NopCloser(bytes.NewReader([]byte("mock response"))),
@@ -112,7 +113,7 @@ func TestServerBasicAuth(t *testing.T) {
 
 	server := NewEntrypoint(options)
 
-	t.Run("Authorized access using Basic Auth", func(t *testing.T) {
+	t.Run("Authorized access using Basic auth", func(t *testing.T) {
 		req := httptest.NewRequest(http.MethodGet, "/allowed", nil)
 		req.SetBasicAuth("user", "pass")
 

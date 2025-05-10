@@ -1,12 +1,12 @@
-package glinet_test
+package glinet
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
-	"github.com/mazzz1y/router-auth-gw/pkg/glinet"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -74,16 +74,18 @@ func TestAuth(t *testing.T) {
 	server := mockServer()
 	defer server.Close()
 
+	ctx := context.Background()
+
 	t.Run("Success", func(t *testing.T) {
-		c := glinet.NewClient(server.URL, "", mockUser, mockPass)
+		c := NewClient(server.URL, "", mockUser, mockPass)
 		assert.NotNil(t, c)
-		assert.NoError(t, c.Auth())
+		assert.NoError(t, c.auth(ctx))
 		assert.Equal(t, mockSession, c.SessionID)
 	})
 
 	t.Run("Failed", func(t *testing.T) {
-		c := glinet.NewClient(server.URL, "", mockUser, "wrong password")
-		err := c.Auth()
+		c := NewClient(server.URL, "", mockUser, "wrong password")
+		err := c.auth(ctx)
 		assert.Error(t, err)
 		assert.Equal(t, "", c.SessionID)
 	})
@@ -93,10 +95,11 @@ func TestRequest(t *testing.T) {
 	server := mockServer()
 	defer server.Close()
 
-	c := glinet.NewClient(server.URL, "", mockUser, mockPass)
+	c := NewClient(server.URL, "", mockUser, mockPass)
 	assert.NotNil(t, c)
 
-	response, err := c.Request(http.MethodPost, "/rpc", `{"method":"someMethod","params":{}}`)
+	ctx := context.Background()
+	response, err := c.Request(ctx, http.MethodPost, "/rpc", `{"method":"someMethod","params":{}}`)
 	assert.NoError(t, err)
 	defer response.Body.Close()
 

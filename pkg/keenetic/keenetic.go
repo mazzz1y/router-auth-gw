@@ -1,19 +1,18 @@
 package keenetic
 
 import (
+	"context"
 	"crypto/md5"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"golang.org/x/net/websocket"
 	"net/http"
 	"net/http/cookiejar"
 	"net/url"
 	"strings"
-	"time"
-
-	"golang.org/x/net/websocket"
 )
 
 type Client struct {
@@ -31,7 +30,6 @@ func NewClient(baseUrl, proxyURL, username, password string) *Client {
 		Username: username,
 		Password: password,
 		Client: &http.Client{
-			Timeout:   10 * time.Second,
 			Jar:       jar,
 			Transport: createTransport(proxyURL),
 		},
@@ -40,14 +38,42 @@ func NewClient(baseUrl, proxyURL, username, password string) *Client {
 	return c
 }
 
-func (kc *Client) Auth() error {
-	challenge, realm, err := kc.getChallenge()
+func (kc *Client) Request(ctx context.Context, method, endpoint, body string) (*http.Response, error) {
+	endpoint = strings.TrimLeft(endpoint, "/")
+	urlParsed, err := url.Parse(kc.URL + "/" + endpoint)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse URL: %v", err)
+	}
+
+	res, err := kc.request(ctx, method, urlParsed.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	if res.StatusCode == http.StatusUnauthorized {
+		if err := kc.auth(ctx); err != nil {
+			return nil, err
+
+		}
+		return kc.request(ctx, method, urlParsed.String(), body)
+	}
+
+	res.Header.Del("Set-Cookie")
+	return res, nil
+}
+
+func (kc *Client) Websocket() (*websocket.Conn, error) {
+	return nil, errors.New("websocket not supported")
+}
+
+func (kc *Client) auth(ctx context.Context) error {
+	challenge, realm, err := kc.getChallenge(ctx)
 	if err != nil {
 		return err
 	}
 
 	payload := buildAuthPayload(kc.Username, kc.Password, challenge, realm)
-	res, err := kc.request("POST", kc.URL+"/auth", payload)
+	res, err := kc.request(ctx, "POST", kc.URL+"/auth", payload)
 	if err != nil {
 		return err
 	}
@@ -61,36 +87,8 @@ func (kc *Client) Auth() error {
 	return nil
 }
 
-func (kc *Client) Request(method, endpoint, body string) (*http.Response, error) {
-	endpoint = strings.TrimLeft(endpoint, "/")
-	urlParsed, err := url.Parse(kc.URL + "/" + endpoint)
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse URL: %v", err)
-	}
-
-	res, err := kc.request(method, urlParsed.String(), body)
-	if err != nil {
-		return nil, err
-	}
-
-	if res.StatusCode == http.StatusUnauthorized {
-		if err := kc.Auth(); err != nil {
-			return nil, err
-
-		}
-		return kc.request(method, urlParsed.String(), body)
-	}
-
-	res.Header.Del("Set-Cookie")
-	return res, nil
-}
-
-func (kc *Client) Websocket() (*websocket.Conn, error) {
-	return nil, errors.New("websocket not supported")
-}
-
-func (kc *Client) getChallenge() (string, string, error) {
-	resp, err := kc.request("GET", kc.URL+"/auth", "")
+func (kc *Client) getChallenge(ctx context.Context) (string, string, error) {
+	resp, err := kc.request(ctx, "GET", kc.URL+"/auth", "")
 	if err != nil {
 		return "", "", err
 	}
@@ -109,8 +107,8 @@ func (kc *Client) getChallenge() (string, string, error) {
 	return challenge, realm, nil
 }
 
-func (kc *Client) request(method, url, body string) (*http.Response, error) {
-	req, err := http.NewRequest(method, url, strings.NewReader(body))
+func (kc *Client) request(ctx context.Context, method, url, body string) (*http.Response, error) {
+	req, err := http.NewRequestWithContext(ctx, method, url, strings.NewReader(body))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create request: %v", err)
 	}

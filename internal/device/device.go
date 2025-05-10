@@ -1,6 +1,7 @@
 package device
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 
@@ -20,23 +21,22 @@ type User struct {
 	Client ClientWrapper
 }
 
-type DeviceManager struct {
+type Manager struct {
 	Devices map[string]Device
 }
 
 type ClientWrapper interface {
-	Request(method, endpoint, body string) (*http.Response, error)
+	Request(ctx context.Context, method, endpoint, body string) (*http.Response, error)
 	Websocket() (*websocket.Conn, error)
-	Auth() error
 }
 
-func NewDeviceManager(cfg []config.DeviceConfig, auth bool) (*DeviceManager, error) {
-	deviceManager := &DeviceManager{
+func NewDeviceManager(cfg []config.DeviceConfig) (*Manager, error) {
+	deviceManager := &Manager{
 		Devices: make(map[string]Device),
 	}
 
 	for _, cfgDevice := range cfg {
-		users, err := initClients(cfgDevice, auth)
+		users, err := initClients(cfgDevice)
 		if err != nil {
 			return nil, fmt.Errorf("%s: %v", cfgDevice.URL, err)
 		}
@@ -49,18 +49,12 @@ func NewDeviceManager(cfg []config.DeviceConfig, auth bool) (*DeviceManager, err
 	return deviceManager, nil
 }
 
-func initClients(c config.DeviceConfig, auth bool) ([]User, error) {
+func initClients(c config.DeviceConfig) ([]User, error) {
 	users := make([]User, len(c.Users))
 	for i, v := range c.Users {
 		client, err := createClient(c.Type, c.URL, c.ProxyUrl, v.Username, v.Password)
 		if err != nil {
 			return nil, err
-		}
-
-		if auth {
-			if err := client.Auth(); err != nil {
-				return nil, err
-			}
 		}
 
 		users[i] = User{

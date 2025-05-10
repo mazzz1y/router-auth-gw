@@ -2,20 +2,19 @@ package glinet
 
 import (
 	"bytes"
+	"context"
 	"crypto/md5"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/nathanaelle/password/v2"
+	"golang.org/x/net/websocket"
 	"io"
 	"net/http"
 	"net/http/cookiejar"
 	"net/url"
 	"strings"
-	"time"
-
-	"github.com/nathanaelle/password/v2"
-	"golang.org/x/net/websocket"
 )
 
 type Client struct {
@@ -39,45 +38,24 @@ func NewClient(baseUrl, proxyURL, username, password string) *Client {
 		Username: username,
 		Password: password,
 		Client: &http.Client{
-			Timeout:   10 * time.Second,
 			Jar:       jar,
 			Transport: createTransport(proxyURL),
 		},
 	}
 }
 
-func (kc *Client) Auth() error {
-	salt, nonce, err := kc.getSaltAndNonce()
-	if err != nil {
-		return err
-	}
-
-	authPayload := buildAuthPayload(kc.Username, kc.Password, salt, nonce)
-	res, err := kc.request("POST", kc.RPCUrl, authPayload)
-	if err != nil {
-		return err
-	}
-	defer res.Body.Close()
-
-	if isAccessDenied(res) {
-		return errors.New("auth failed")
-	}
-
-	return kc.extractSid(res)
-}
-
-func (kc *Client) Request(method, path, body string) (*http.Response, error) {
+func (kc *Client) Request(ctx context.Context, method, path, body string) (*http.Response, error) {
 	url := kc.URL + path
-	res, err := kc.request(method, url, body)
+	res, err := kc.request(ctx, method, url, body)
 	if err != nil {
 		return nil, err
 	}
 
 	if isAccessDenied(res) {
-		if err = kc.Auth(); err != nil {
+		if err = kc.auth(ctx); err != nil {
 			return nil, err
 		}
-		return kc.request(method, url, body)
+		return kc.request(ctx, method, url, body)
 	}
 
 	cleanResponseHeaders(res)
@@ -86,20 +64,40 @@ func (kc *Client) Request(method, path, body string) (*http.Response, error) {
 
 func (kc *Client) Websocket() (*websocket.Conn, error) {
 	wsUrl := kc.WSUrl + fmt.Sprintf("?sid=%s", kc.SessionID)
-	config, err := websocket.NewConfig(wsUrl, kc.URL)
+	c, err := websocket.NewConfig(wsUrl, kc.URL)
 	if err != nil {
 		return nil, err
 	}
 
-	return websocket.DialConfig(config)
+	return websocket.DialConfig(c)
 }
 
-func (kc *Client) request(method, url, body string) (*http.Response, error) {
+func (kc *Client) auth(ctx context.Context) error {
+	salt, nonce, err := kc.getSaltAndNonce(ctx)
+	if err != nil {
+		return err
+	}
+
+	authPayload := buildAuthPayload(kc.Username, kc.Password, salt, nonce)
+
+	res, err := kc.request(ctx, "POST", kc.RPCUrl, authPayload)
+	if err != nil {
+		return err
+	}
+	defer res.Body.Close()
+	if isAccessDenied(res) {
+		return errors.New("auth failed")
+	}
+
+	return kc.extractSid(res)
+}
+
+func (kc *Client) request(ctx context.Context, method, url, body string) (*http.Response, error) {
 	if url == kc.RPCUrl {
 		body = kc.replaceSid(body)
 	}
 
-	req, err := http.NewRequest(method, url, bytes.NewBuffer([]byte(body)))
+	req, err := http.NewRequestWithContext(ctx, method, url, bytes.NewBuffer([]byte(body)))
 	if err != nil {
 		return nil, err
 	}
@@ -112,14 +110,13 @@ func (kc *Client) request(method, url, body string) (*http.Response, error) {
 	return resp, nil
 }
 
-func (kc *Client) getSaltAndNonce() (string, string, error) {
+func (kc *Client) getSaltAndNonce(ctx context.Context) (string, string, error) {
 	payload := buildChallengePayload(kc.Username)
-	response, err := kc.request("POST", kc.RPCUrl, payload)
+	response, err := kc.request(ctx, "POST", kc.RPCUrl, payload)
 	if err != nil {
 		return "", "", err
 	}
 	defer response.Body.Close()
-
 	return parseSaltAndNonce(response)
 }
 
